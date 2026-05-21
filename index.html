@@ -21,7 +21,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // 1. 地図の初期設定（日本全体が見える位置）
+    // 1. 地図の初期設定
     const map = L.map('map').setView([35.68, 139.76], 10);
     
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -38,25 +38,37 @@
         const markers = [];
 
         data.forEach(spot => {
-          // 【★超強力安全装置】
-          // 文字列として届いた緯度・経度を、ここで「確実に数字（Float）」に変換します
-          const lat = parseFloat(spot.lat);
-          const lng = parseFloat(spot.lng);
+          // 【★超最終兵器】
+          // アルファベットの名前（spot.latなど）が全滅していても、
+          // 連想配列の「値（Object.values）」を直接引っこ抜いて、列の順番で強制的に認識させます。
+          // スプレッドシートの左から、1番目=名称、2番目=緯度、3番目=経度、4番目=活動区分... となっている前提です。
+          const values = Object.values(spot);
+          
+          const name = values[0] || '名称未設定';
+          const lat = parseFloat(values[1]); // 左から2番目の列（B列）を強制的に緯度にする
+          const lng = parseFloat(values[2]); // 左から3番目の列（C列）を強制的に経度にする
+          const type = values[3] || '未設定';
+          const venue = values[4] || '未設定';
+          const datetime = values[5] || '未設定';
+          const fee = values[6] || '無料';
+          const target = values[7] || 'どなたでも';
+          const tel = values[8] || '';
+          const barrier_free = values[9] || '情報なし';
 
-          // 変換した結果、まともな数字（エラーでない）場合だけピンを立てる
+          // 変換した結果、まともな数字の場合だけピンを立てる
           if (!isNaN(lat) && !isNaN(lng)) {
             
-            const telHtml = spot.tel ? `<a href="tel:${spot.tel}" class="tel-btn">📞 電話をかける</a>` : 'なし';
+            const telHtml = tel ? `<a href="tel:${tel}" class="tel-btn">📞 電話をかける</a>` : 'なし';
 
             const popupContent = `
-              <h3 class="popup-title">🌸 ${spot.name || '名称未設定'}</h3>
+              <h3 class="popup-title">🌸 ${name}</h3>
               <table class="popup-table">
-                <tr><td class="label">活動区分</td><td>${spot.type || '未設定'}</td></tr>
-                <tr><td class="label">会場名</td><td>${spot.venue || '未設定'}</td></tr>
-                <tr><td class="label">日時</td><td>${spot.datetime || '未設定'}</td></tr>
-                <tr><td class="label">参加費</td><td>${spot.fee || '無料'}</td></tr>
-                <tr><td class="label">対象者</td><td>${spot.target || 'どなたでも'}</td></tr>
-                <tr><td class="label">バリアフリー</td><td>${spot.barrier_free || '情報なし'}</td></tr>
+                <tr><td class="label">活動区分</td><td>${type}</td></tr>
+                <tr><td class="label">会場名</td><td>${venue}</td></tr>
+                <tr><td class="label">日時</td><td>${datetime}</td></tr>
+                <tr><td class="label">参加費</td><td>${fee}</td></tr>
+                <tr><td class="label">対象者</td><td>${target}</td></tr>
+                <tr><td class="label">バリアフリー</td><td>${barrier_free}</td></tr>
                 <tr><td class="label">連絡先</td><td>${telHtml}</td></tr>
               </table>
             `;
@@ -71,7 +83,7 @@
         if (markers.length > 0) {
           map.fitBounds(markers);
         } else {
-          alert('データは届きましたが、有効な緯度・経度の数字が見つかりませんでした。スプレッドシートの数字が半角であることを確認してください。');
+          alert('【エラー】スプレッドシートのB列（2番目）とC列（3番目）に正しい半角数字が入っているか、再度ご確認ください。');
         }
       })
       .catch(err => alert('データ読み込みエラー: ' + err));
