@@ -3,32 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>シンプルテスト</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>#map { width: 100vw; height: 100vh; margin: 0; }</style>
+  <title>原因特定テスト</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
+    #debug-box { background: white; padding: 15px; border: 2px solid #ff4444; border-radius: 8px; margin-bottom: 20px; }
+    pre { background: #222; color: #00ff00; padding: 10px; overflow-x: auto; border-radius: 4px; }
+  </style>
 </head>
 <body>
-  <div id="map"></div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    // 地図を東京中心で表示
-    const map = L.map('map').setView([35.68, 139.76], 10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    // ⚠️ここにあなたの本物のGASのURLを入れてください
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyzdzm3tTgzU2M3286epwaERSFAKzZoLrdMzGzF6JSrvtWPR36KwExIxvVE_RaulrM9/exec'; 
+  <div id="debug-box">
+    <h2>🔍 届いたデータの診断結果</h2>
+    <p>スプレッドシートから届いたデータの「1件目」を以下に表示しています：</p>
+    <pre id="data-preview">データを読み込み中...</pre>
+  </div>
+
+  <script>
+    // ⚠️ここに「一番新しい」GASのURLを貼り付けてください！
+    const GAS_URL = 'あなたの最新のGASウェブアプリURL'; 
 
     fetch(GAS_URL)
       .then(res => res.json())
       .then(data => {
-        data.forEach(spot => {
-          // 色分けなし。標準の青いピンを立てるだけのシンプルな処理
-          L.marker([spot.lat, spot.lng])
-            .addTo(map)
-            .bindPopup(`<b>${spot.name}</b>`);
-        });
+        if (data.length === 0) {
+          document.getElementById('data-preview').innerText = 'データが空っぽ（0件）です。';
+          return;
+        }
+        
+        // 届いたデータの1件目を、見やすい文字にして画面に表示する
+        const firstRow = data[0];
+        document.getElementById('data-preview').innerText = JSON.stringify(firstRow, null, 2);
       })
-      .catch(err => alert('データ読み込みエラー: ' + err));
+      .catch(err => {
+        document.getElementById('data-preview').innerText = '通信エラー: ' + err;
+      });
   </script>
 </body>
 </html>
