@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>燕市シニアの集いの場・通いの場MAP</title>
-  <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4CAF50">
+  <title>シニア通いの場マップ</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: sans-serif; }
@@ -23,17 +21,19 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // 1. 【変更】初期位置を「燕市役所付近（緯度: 37.6653, 経度: 138.8927）」に設定
-    // 最後の「13」はズーム倍率です（数字が大きいほど拡大されます）
+    // 1. 初期位置を「燕市役所付近」に設定
     const map = L.map('map').setView([37.6653, 138.8927], 13);
     
-    // 2. 【変更】地図データを、信頼性の高い「国土地理院地図」に変更
+    // 2. 地図データを「国土地理院地図」に設定
     L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
       attribution: '<a>国土地理院</a>'
     }).addTo(map);
 
     // ⚠️ここにあなたの「一番新しい」GASのURLを貼り付けてください！
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbyzdzm3tTgzU2M3286epwaERSFAKzZoLrdMzGzF6JSrvtWPR36KwExIxvVE_RaulrM9/exec'; 
+
+    // 重複チェック用のメモ書き
+    const usedCoordinates = {};
 
     // 3. データの取得
     fetch(GAS_URL)
@@ -42,32 +42,47 @@
         const markers = [];
 
         data.forEach(spot => {
+          // スプレッドシートから届いたデータをバラします
           const values = Object.values(spot);
           
+          // 💡 削除した後の「新しい8つの列」の順番に合わせて読み込みます
           const name = values[0] || '名称未設定';
-          const lat = parseFloat(values[1]); 
-          const lng = parseFloat(values[2]); 
-          const type = values[3] || '未設定';
-          const venue = values[4] || '未設定';
-          const datetime = values[5] || '未設定';
-          const fee = values[6] || '無料';
-          const target = values[7] || 'どなたでも';
-          const tel = values[8] || '';
-          const barrier_free = values[9] || '情報なし';
+          let lat = parseFloat(values[1]); // 2番目：緯度
+          let lng = parseFloat(values[2]); // 3番目：経度
+          const type = values[3] || '未設定'; // 4番目：活動区分
+          const venue = values[4] || '未設定'; // 5番目：会場名
+          const datetime = values[5] || '未設定'; // 6番目：日時
+          const target = values[6] || 'どなたでも'; // 7番目：対象者
+          const tel = values[7] || ''; // 8番目：連絡先
 
           if (!isNaN(lat) && !isNaN(lng)) {
             
+            // 位置の重複防止機能（同じ会場ならピンを少しズラす）
+            const coordKey = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+            
+            if (usedCoordinates[coordKey]) {
+              const count = usedCoordinates[coordKey];
+              const angle = (count * 135) * (Math.PI / 180);
+              const offset = 0.00015;
+              
+              lat += Math.cos(angle) * offset;
+              lng += Math.sin(angle) * offset;
+              
+              usedCoordinates[coordKey] += 1;
+            } else {
+              usedCoordinates[coordKey] = 1;
+            }
+
             const telHtml = tel ? `<a href="tel:${tel}" class="tel-btn">📞 電話をかける</a>` : 'なし';
 
+            // ポップアップ画面の表示内容
             const popupContent = `
               <h3 class="popup-title">🌸 ${name}</h3>
               <table class="popup-table">
                 <tr><td class="label">活動区分</td><td>${type}</td></tr>
                 <tr><td class="label">会場名</td><td>${venue}</td></tr>
                 <tr><td class="label">日時</td><td>${datetime}</td></tr>
-                <tr><td class="label">参加費</td><td>${fee}</td></tr>
                 <tr><td class="label">対象者</td><td>${target}</td></tr>
-                <tr><td class="label">バリアフリー</td><td>${barrier_free}</td></tr>
                 <tr><td class="label">連絡先</td><td>${telHtml}</td></tr>
               </table>
             `;
@@ -77,8 +92,6 @@
           }
         });
 
-        // スプレッドシートにデータがある場合は、ピンが全部収まる位置に自動調整。
-        // データがまだ少ないうちは、上で設定した「燕市役所中心」が優先されます。
         if (markers.length > 0) {
           map.fitBounds(markers);
         }
